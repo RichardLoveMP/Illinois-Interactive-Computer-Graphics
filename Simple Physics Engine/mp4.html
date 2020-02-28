@@ -1,0 +1,78 @@
+<!DOCTYPE HTML> 
+<html lang="en"> 
+<head>
+<title>Physics Engine</title>
+<meta charset="utf-8"> 
+</head>
+    <script id="shader-vs" type="x-shader/x-vertex">
+        attribute vec3 aVertexPosition;
+        attribute vec3 aVertexNormal;
+        
+        uniform mat4 uMVMatrix;
+        uniform mat4 uPMatrix;
+        uniform mat3 uNMatrix;
+        
+        varying vec3 vPosition;
+        varying vec3 vNormal;
+    
+        void main(void) {
+            vec4 vertexPositionEye4 = uMVMatrix * vec4(aVertexPosition, 1.0);
+            vPosition = vertexPositionEye4.xyz / vertexPositionEye4.w;
+            vNormal = normalize(uNMatrix * aVertexNormal);
+            gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+        }
+    </script>
+    
+    <script id="shader-fs" type="x-shader/x-fragment">
+        precision mediump float;
+        varying vec3 vPosition;
+        varying vec3 vNormal;
+
+        uniform vec3 uKAmbient;
+        uniform vec3 uKDiffuse;
+        uniform vec3 uKSpecular;
+        uniform float uShininess;
+        uniform vec3 uLightPosition;
+        uniform vec3 uAmbientLightColor;
+        uniform vec3 uDiffuseLightColor;
+        uniform vec3 uSpecularLightColor;
+
+        
+        void main(void) {
+            // Transform the normal (n) to eye coordinates
+            vec3 normal = normalize(vNormal);
+  
+            // Calculate the vector to the light source (l)
+            vec3 lightDir = normalize(uLightPosition - vPosition);
+
+            float diffuseLightWeightning = max(dot(normal, lightDir), 0.0);
+            float specularLightWeightning = 0.0;
+
+            if(diffuseLightWeightning > 0.0) {
+                // Calculate the view vector (v)
+                vec3 viewDir = normalize(-vPosition);
+
+                // Calculate the halfway vector (h)
+                vec3 halfDir = normalize(lightDir + viewDir);
+        
+                float specAngle = max(dot(halfDir, normal), 0.0);
+                specularLightWeightning = pow(specAngle, uShininess);
+            }
+            gl_FragColor = vec4(((uAmbientLightColor*uKAmbient)
+                    + (uDiffuseLightColor*uKDiffuse) * diffuseLightWeightning
+                    + ((uSpecularLightColor*uKSpecular) * specularLightWeightning)),1.0);
+        }
+    </script>
+    
+    <script src="gl-matrix-min.js"></script>
+    <script src="webgl-utils.js"></script>
+    <script src="simpleModeling.js"></script>
+    <script src="mp4.js"></script>
+    <body onload="startup();">
+        <canvas id="myGLCanvas" width="800" height="800"></canvas>
+        <div id="config">
+            <ul>Using <font color="#FF0000">Enter</font> to eject a small ball</ul>
+            <ul>Using <font color="#FF0000">R</font> to clean the canvas</ul>
+        </div>
+    </body>
+</html>
